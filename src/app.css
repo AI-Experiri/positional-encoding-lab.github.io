@@ -1,0 +1,39 @@
+/* ABOUTME: Global styles with Tailwind imports */
+/* ABOUTME: Base styling for the positional encoding visualizer */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #1a1a2e;
+  --color-surface: #16213e;
+  --color-primary: #e94560;
+  --color-secondary: #0f3460;
+  --color-text: #eaeaea;
+
+  /* Typography scale - mobile first */
+  --text-h1: 1.125rem;
+  --text-h2: 1rem;
+  --text-h3: 0.9375rem;
+  --text-body: 0.875rem;
+  --text-small: 0.75rem;
+  --text-tiny: 0.625rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    /* Desktop typography - larger */
+    --text-h1: 1.5rem;
+    --text-h2: 1.25rem;
+    --text-h3: 1.125rem;
+    --text-body: 1rem;
+    --text-small: 0.875rem;
+    --text-tiny: 0.75rem;
+  }
+}
+
+body {
+  @apply bg-[var(--color-bg)] text-[var(--color-text)] min-h-screen;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}

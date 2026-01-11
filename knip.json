@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.js", "src/App.svelte", "src/lib/**/*.{js,svelte}"],
+  "project": ["src/**/*.{js,svelte}"],
+  "ignore": ["dist/**", "build/**", "src/lib/backups/**"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["prettier-plugin-svelte"]
+}

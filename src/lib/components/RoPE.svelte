@@ -3,6 +3,7 @@
 
 <script>
   import { Section } from './layouts';
+  import Rope_AttnDiagram from './Rope_AttnDiagram.svelte';
 
   // Separate state for each demo to avoid "haunted UI" effect
   let positionSingle = $state(0);      // Single position rotation demo
@@ -1807,5 +1808,14 @@
         not just where they are.
       </p>
     </div>
+  </Section>
+
+  <!-- 10. RoPE Attention Flow Diagram -->
+  <Section>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">10. RoPE Attention Flow</h3>
+    <p class="text-[var(--text-small)] text-gray-400 mb-3">
+      How rotation is applied to Q and K vectors before computing attention scores.
+    </p>
+    <Rope_AttnDiagram />
   </Section>
 </div>

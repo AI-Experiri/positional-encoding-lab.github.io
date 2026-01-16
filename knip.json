@@ -1,8 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/main.js", "src/App.svelte", "src/lib/**/*.{js,svelte}"],
+  "entry": ["src/routes/+*.{js,svelte}", "src/lib/**/*.{js,svelte}"],
   "project": ["src/**/*.{js,svelte}"],
-  "ignore": ["dist/**", "build/**", "src/lib/backups/**"],
+  "ignore": ["dist/**", "build/**", ".svelte-kit/**", "src/lib/backups/**"],
   "ignoreExportsUsedInFile": true,
-  "ignoreDependencies": ["prettier-plugin-svelte"]
+  "ignoreDependencies": [
+    "prettier-plugin-svelte",
+    "prettier-plugin-tailwindcss",
+    "tailwindcss"
+  ],
+  "paths": {
+    "$lib/*": ["src/lib/*"]
+  }
 }

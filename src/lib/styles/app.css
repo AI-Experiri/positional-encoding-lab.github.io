@@ -1,9 +1,7 @@
-/* ABOUTME: Global styles with Tailwind imports */
+/* ABOUTME: Global styles with Tailwind v4 imports */
 /* ABOUTME: Base styling for the positional encoding visualizer */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --color-bg: #1a1a2e;
@@ -34,6 +32,8 @@
 }
 
 body {
-  @apply bg-[var(--color-bg)] text-[var(--color-text)] min-h-screen;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
   font-family: "Segoe UI", system-ui, sans-serif;
 }

@@ -56,6 +56,13 @@
       <p><strong class="text-white">Position info gets diluted:</strong> After multiple layers, the position signal mixed into embeddings may weaken.</p>
     </div>
   </div>
+
+  <div class="bg-[#1a1a2e] border border-amber-500/30 rounded p-3 mt-3">
+    <p class="text-[var(--text-small)] text-gray-300">
+      <strong class="text-amber-400">The question:</strong> What if we told the attention mechanism
+      <em>how far apart</em> tokens are, instead of where each one sits absolutely?
+    </p>
+  </div>
 </Section>
 
 <!-- 2. The Key Insight -->
@@ -514,3 +521,49 @@
 
   <RelativePE_AttnDiagram />
 </Section>
+
+<!-- What happened next - eureka section -->
+<section class="bg-gradient-to-br from-cyan-600/30 via-blue-700/20 to-purple-800/20 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20 rounded-lg p-4 mb-4">
+  <h3 class="text-[var(--text-h2)] font-semibold text-cyan-300 mb-2">💡 What happened next</h3>
+
+  <div class="bg-[#1a1a2e]/80 rounded p-4 mb-4">
+    <p class="text-[var(--text-small)] text-gray-300 mb-3">
+      Shaw et al.'s relative PE was a breakthrough, but researchers had new questions:
+    </p>
+    <div class="space-y-2 text-[var(--text-small)]">
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">What about very long sequences?</strong> Clipping helps, but can we process documents longer than memory allows?</p>
+          <p class="text-gray-500">Could we use recurrence to handle arbitrarily long contexts?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Per-layer embeddings?</strong> Shaw uses the same aᴷ, aⱽ for all layers.</p>
+          <p class="text-gray-500">What if different layers need different position representations?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Computation efficiency?</strong> Looking up embeddings for each (i,j) pair has overhead.</p>
+          <p class="text-gray-500">Can we reformulate for better efficiency?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teaser for Transformer-XL -->
+  <div class="bg-[#e94560]/15 border border-[#e94560]/40 rounded p-4">
+    <p class="text-[var(--text-small)] text-[#e94560] font-semibold mb-2">What if we combined relative PE with recurrence?</p>
+    <p class="text-[var(--text-small)] text-gray-300">
+      Transformer-XL introduced <strong class="text-white">segment-level recurrence</strong> to process very long documents,
+      with a reformulated relative PE that works across segment boundaries.
+    </p>
+    <p class="text-[var(--text-small)] text-gray-400 mt-2">
+      → See the <strong class="text-[#e94560]">Transformer-XL</strong> tab
+    </p>
+  </div>
+</section>

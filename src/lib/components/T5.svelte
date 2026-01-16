@@ -25,14 +25,14 @@
     </p>
   </section>
 
-  <!-- 1. The Question -->
+  <!-- 1. The Problem -->
   <section class="bg-[#16213e] rounded-lg p-4">
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">1. The Question: Does Exact Distance Always Matter?</h3>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">1. The Problem: Too Many Position Parameters</h3>
     <p class="text-[var(--text-body)] text-gray-300 mb-3">
       Previous methods (Sinusoidal, Transformer-XL) gave every distance unique treatment.
       But is the difference between "50 tokens apart" and "51 tokens apart" really meaningful?
     </p>
-    <div class="bg-[#0f3460] rounded p-3">
+    <div class="bg-[#0f3460] rounded p-3 mb-3">
       <div class="flex items-center gap-2 text-[var(--text-small)] font-mono overflow-x-auto pb-2">
         <span class="text-gray-500">distance:</span>
         <span class="bg-green-900/30 px-2 py-1 rounded text-green-300 border border-green-500/50">1</span>
@@ -45,6 +45,13 @@
         <span class="bg-gray-700/30 px-2 py-1 rounded text-gray-400">101</span>
       </div>
       <p class="text-[var(--text-small)] text-gray-500">Each distance gets unique treatment — but is this necessary?</p>
+    </div>
+
+    <div class="bg-[#1a1a2e] border border-amber-500/30 rounded p-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-amber-400">The question:</strong> Does exact distance always matter,
+        or can we group similar distances together?
+      </p>
     </div>
   </section>
 
@@ -336,6 +343,52 @@
           <p>• <strong class="text-white">Key innovation:</strong> Logarithmic bucketing matches linguistic intuition</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- What happened next -->
+  <section class="bg-gradient-to-br from-cyan-600/30 via-blue-700/20 to-purple-800/20 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20 rounded-lg p-4 mb-4">
+    <h3 class="text-[var(--text-h2)] font-semibold text-cyan-300 mb-2">💡 What happened next</h3>
+
+    <p class="text-[var(--text-small)] text-gray-300 mb-4">
+      T5's scalar biases were simple and effective, but still required a learned lookup table.
+      Researchers wondered...
+    </p>
+
+    <div class="space-y-3 text-[var(--text-small)] mb-4">
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Can we get relative positions without any lookup table?</strong></p>
+          <p class="text-gray-500">What if the math itself encoded relative distance?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">What if position lived in the geometry of vectors?</strong></p>
+          <p class="text-gray-500">Rotating Q and K vectors so their dot product naturally encodes distance?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Could we combine the elegance of sinusoids with relative positioning?</strong></p>
+          <p class="text-gray-500">Use continuous functions, but make them encode relative distance in the attention computation?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teaser for RoPE -->
+    <div class="bg-[#e94560]/20 border border-[#e94560]/50 rounded p-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-[#e94560]">RoPE (2021)</strong> found an elegant answer:
+        <strong class="text-white">rotate Q and K vectors by their position</strong>.
+        When you compute Q·K, the rotation angles subtract — giving you relative position for free.
+      </p>
+      <p class="text-[var(--text-small)] text-gray-500 mt-2">
+        → See the <strong class="text-orange-400">RoPE</strong> tab
+      </p>
     </div>
   </section>
 </div>

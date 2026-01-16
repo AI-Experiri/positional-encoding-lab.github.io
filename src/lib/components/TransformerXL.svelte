@@ -71,6 +71,13 @@
         Distance 17 simply doesn't exist in the table.
       </p>
     </ContentBox>
+
+    <div class="bg-[#1a1a2e] border border-amber-500/30 rounded p-3 mt-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-amber-400">The question:</strong> Can we get relative position encoding
+        that generalizes to <em>any</em> distance, not just those seen during training?
+      </p>
+    </div>
   </Section>
 
   <!-- 2. The Key Insight -->
@@ -458,13 +465,13 @@
       <div class="bg-[#0f3460] rounded p-2 mb-2">
         <div class="space-y-1 text-[var(--text-small)] font-mono">
           <div class="flex items-center gap-2">
-            <span class="text-amber-400 w-20">Segment 1:</span>
+            <span class="text-amber-400 whitespace-nowrap">Segment 1:</span>
             <span class="text-gray-300">[1-512]</span>
             <span class="text-gray-500">→</span>
             <span class="text-green-400">cache h₁</span>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-amber-400 w-20">Segment 2:</span>
+            <span class="text-amber-400 whitespace-nowrap">Segment 2:</span>
             <span class="text-gray-300">[513-1024]</span>
             <span class="text-gray-500">→ attend to [h₁ ; current] →</span>
             <span class="text-green-400">cache h₂</span>
@@ -511,4 +518,50 @@
     </div>
     <TransformerXL_AttnDiagram />
   </Section>
+
+  <!-- What happened next -->
+  <section class="bg-gradient-to-br from-cyan-600/30 via-blue-700/20 to-purple-800/20 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20 rounded-lg p-4 mb-4">
+    <h3 class="text-[var(--text-h2)] font-semibold text-cyan-300 mb-2">💡 What happened next</h3>
+
+    <p class="text-[var(--text-small)] text-gray-300 mb-4">
+      Transformer-XL solved the generalization problem with sinusoidal R, but the four-term decomposition adds complexity.
+      Researchers started asking...
+    </p>
+
+    <div class="space-y-3 text-[var(--text-small)] mb-4">
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Is the four-term split necessary?</strong></p>
+          <p class="text-gray-500">Could we get relative position benefits with a simpler formula?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Does precise distance always matter?</strong></p>
+          <p class="text-gray-500">Maybe "3 tokens apart" and "4 tokens apart" can share the same bias?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Can we just add a bias instead of projecting R?</strong></p>
+          <p class="text-gray-500">Skip W<sub>k,R</sub> entirely and learn scalar biases per distance bucket?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teaser for T5 -->
+    <div class="bg-[#e94560]/20 border border-[#e94560]/50 rounded p-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-[#e94560]">T5 (2020)</strong> took a radical simplification:
+        just learn a <strong class="text-white">scalar bias per distance bucket</strong>, shared across heads.
+        No sinusoids, no four terms — just b(i-j) added to attention scores.
+      </p>
+      <p class="text-[var(--text-small)] text-gray-500 mt-2">
+        → See the <strong class="text-yellow-400">T5</strong> tab
+      </p>
+    </div>
+  </section>
 </div>

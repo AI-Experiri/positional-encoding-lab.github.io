@@ -116,24 +116,35 @@
   let slowRad = $derived.by(() => slowAngle * Math.PI / 180);
   let slowWrapped = $derived.by(() => hasWrapped(distanceDemo, SLOW_THETA));
 
-  // Decay visualization: simplified model showing natural decay
-  function computeDecayPoints() {
-    const points = [];
-    const numPairs = 4;
-    const thetas = [1.0, 0.3, 0.1, 0.03]; // Radians per position
+  // Decay visualization: using actual RoPE frequency formula
+  // θᵢ = 10000^(-2i/d) from the paper
+  let decayMaxDist = $state(1000);
+  const DECAY_DIM = 64; // Typical embedding dimension for visualization
+  const DECAY_BASE = 10000;
 
-    for (let dist = 0; dist <= 50; dist++) {
-      let avgScore = 0;
+  let decayPoints = $derived.by(() => {
+    const points = [];
+    const numPairs = DECAY_DIM / 2;
+    const step = Math.max(1, Math.floor(decayMaxDist / 200)); // Keep ~200 points for smooth curve
+
+    // Precompute thetas using RoPE formula: θᵢ = base^(-2i/d)
+    const thetas = [];
+    for (let i = 0; i < numPairs; i++) {
+      thetas.push(Math.pow(DECAY_BASE, -2 * i / DECAY_DIM));
+    }
+
+    for (let dist = 0; dist <= decayMaxDist; dist += step) {
+      let sumCos = 0;
       for (let i = 0; i < numPairs; i++) {
-        avgScore += Math.cos(dist * thetas[i]);
+        sumCos += Math.cos(dist * thetas[i]);
       }
-      avgScore /= numPairs;
-      points.push({ dist, score: avgScore });
+      // Normalize by number of pairs
+      points.push({ dist, score: sumCos / numPairs });
     }
     return points;
-  }
+  });
 
-  const decayPoints = computeDecayPoints();
+  let decayScale = $derived(270 / decayMaxDist);
 
   // Helper for minimal angular difference (for arc rendering)
   // Always draws the shorter arc between two angles
@@ -209,79 +220,9 @@
     </p>
   </Section>
 
-  <!-- 1. The Evolution: How We Got Here -->
+  <!-- 1. The Problem: Why Additive PE Isn't Ideal -->
   <Section>
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">1. The Evolution: How We Got Here</h3>
-    <p class="text-[var(--text-body)] text-gray-300 mb-3">
-      Each generation of positional encoding addressed limitations of the previous:
-    </p>
-
-    <div class="space-y-3">
-      <!-- Sinusoidal -->
-      <div class="bg-[#0f3460] rounded p-3">
-        <div class="flex items-start gap-3">
-          <span class="bg-purple-900/50 px-2 py-0.5 rounded text-purple-300 text-[var(--text-small)] font-semibold whitespace-nowrap">Sinusoidal (2017)</span>
-          <div class="text-[var(--text-small)] text-gray-300">
-            <p><strong class="text-white">Added PE to embeddings:</strong> X = E + PE</p>
-            <p class="text-gray-500 mt-1">✓ Fixed, no parameters | ✗ Absolute position, must learn relative patterns</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Shaw et al. -->
-      <div class="bg-[#0f3460] rounded p-3">
-        <div class="flex items-start gap-3">
-          <span class="bg-blue-900/50 px-2 py-0.5 rounded text-blue-300 text-[var(--text-small)] font-semibold whitespace-nowrap">Shaw et al. (2018)</span>
-          <div class="text-[var(--text-small)] text-gray-300">
-            <p><strong class="text-white">Added learned relative embeddings</strong> to attention logits</p>
-            <p class="text-gray-500 mt-1">✓ First explicit relative position | ✗ Requires learned position embeddings</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Transformer-XL -->
-      <div class="bg-[#0f3460] rounded p-3">
-        <div class="flex items-start gap-3">
-          <span class="bg-green-900/50 px-2 py-0.5 rounded text-green-300 text-[var(--text-small)] font-semibold whitespace-nowrap">Transformer-XL (2019)</span>
-          <div class="text-[var(--text-small)] text-gray-300">
-            <p><strong class="text-white">4-term decomposition</strong> <span class="text-gray-500">(schematic):</span> content + content-pos + pos-content + pos-pos terms</p>
-            <p class="text-gray-500 mt-1">✓ Sinusoidal relative PE, segment recurrence | ✗ Complex decomposition</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- T5 -->
-      <div class="bg-[#0f3460] rounded p-3">
-        <div class="flex items-start gap-3">
-          <span class="bg-yellow-900/50 px-2 py-0.5 rounded text-yellow-300 text-[var(--text-small)] font-semibold whitespace-nowrap">T5 (2020)</span>
-          <div class="text-[var(--text-small)] text-gray-300">
-            <p><strong class="text-white">Simplified to scalar bias:</strong> score = QK<sup>T</sup> + b[bucket(i−j)]</p>
-            <p class="text-gray-500 mt-1">✓ Simple, bucketed distances | ✗ Position still added after Q·K</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- RoPE -->
-      <div class="bg-[#1a1a2e] border border-orange-500/50 rounded p-3">
-        <div class="flex items-start gap-3">
-          <span class="bg-orange-900/50 px-2 py-0.5 rounded text-orange-300 text-[var(--text-small)] font-semibold whitespace-nowrap">RoPE (2021)</span>
-          <div class="text-[var(--text-small)] text-gray-300">
-            <p><strong class="text-white">Rotate Q and K by position:</strong> score = (R<sub>m</sub>q<sub>m</sub>) · (R<sub>n</sub>k<sub>n</sub>)<sup>T</sup></p>
-            <p class="text-[var(--text-tiny)] text-gray-500 mt-1">q<sub>m</sub> = query vector at position m, k<sub>n</sub> = key vector at position n</p>
-            <p class="text-emerald-400 mt-1">✓ Relative position is intrinsic | ✓ Position embedded in Q·K computation itself</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <p class="text-[var(--text-small)] text-gray-500 mt-3 text-center">
-      RoPE unifies position encoding and attention computation — position isn't added or biased, it's <em>rotated in</em>.
-    </p>
-  </Section>
-
-  <!-- 2. The Problem: Why Additive PE Isn't Ideal -->
-  <Section>
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">2. The Problem: Why Additive PE Isn't Ideal</h3>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">1. The Problem: Why Additive PE Isn't Ideal</h3>
     <p class="text-[var(--text-body)] text-gray-300 mb-3">
       Previous approaches had structural limitations that RoPE addresses:
     </p>
@@ -320,35 +261,47 @@
       </div>
     </div>
 
-    <!-- Energy Neutrality Story -->
-    <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-4 mt-4 mb-3">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> Energy Neutrality</p>
-      <p class="text-[var(--text-body)] text-gray-300 mb-3">
-        When you <em>add</em> position to an embedding (X = E + PE), you're changing the vector's <strong class="text-white">magnitude</strong>
-        — making the token "louder" or "quieter" in the attention computation. It's like adjusting the volume on every word.
+    <div class="bg-[#1a1a2e] border border-amber-500/30 rounded p-3 mt-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-amber-400">The question:</strong> Can we make position <em>intrinsic</em> to the attention computation itself,
+        so relative distance falls out naturally from the math?
       </p>
-      <div class="grid md:grid-cols-2 gap-3 text-[var(--text-small)] mb-3">
-        <div class="bg-[#0f3460] rounded p-3 border border-red-500/30">
-          <p class="text-red-400 font-semibold mb-1">Additive PE: Changes energy</p>
-          <p class="text-gray-400">||E + PE|| ≠ ||E||</p>
-          <p class="text-gray-500 mt-1">Position signal can amplify or dampen tokens unpredictably</p>
-        </div>
-        <div class="bg-[#0f3460] rounded p-3 border border-emerald-500/30">
-          <p class="text-emerald-400 font-semibold mb-1">RoPE: Preserves energy</p>
-          <p class="text-gray-400">||R(x)|| = ||x||</p>
-          <p class="text-gray-500 mt-1">Rotation only changes <em>direction</em>, never magnitude</p>
-        </div>
+    </div>
+  </Section>
+
+  <!-- 2. The Intuition: Energy Neutrality -->
+  <Section>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">2. The Intuition: Energy Neutrality</h3>
+
+    <p class="text-[var(--text-body)] text-gray-300 mb-3">
+      When you <em>add</em> position to an embedding (X = E + PE), you're changing the vector's <strong class="text-white">magnitude</strong>
+      — making the token "louder" or "quieter" in the attention computation.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-3 text-[var(--text-small)] mb-4">
+      <div class="bg-[#0f3460] rounded p-3 border border-red-500/30">
+        <p class="text-red-400 font-semibold mb-1">Additive PE: Changes energy</p>
+        <p class="text-gray-400">||E + PE|| ≠ ||E||</p>
+        <p class="text-gray-500 mt-1">Position signal can amplify or dampen tokens unpredictably</p>
       </div>
-      <p class="text-[var(--text-small)] text-gray-400">
-        <strong class="text-yellow-400">RoPE is energy-neutral.</strong> Rotating a vector doesn't make the token
-        "louder" or "quieter" — it only changes its <em>flavor</em> or <em>phase</em>. This explains why RoPE
+      <div class="bg-[#0f3460] rounded p-3 border border-emerald-500/30">
+        <p class="text-emerald-400 font-semibold mb-1">RoPE: Preserves energy</p>
+        <p class="text-gray-400">||R(x)|| = ||x||</p>
+        <p class="text-gray-500 mt-1">Rotation only changes <em>direction</em>, never magnitude</p>
+      </div>
+    </div>
+
+    <div class="bg-[#1a1a2e] border border-emerald-500/30 rounded p-3 mb-4">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-emerald-400">RoPE is energy-neutral.</strong> Rotating a vector doesn't make the token
+        "louder" or "quieter" — it only changes its <em>direction</em>. This explains why RoPE
         is more stable in very deep networks: the position signal can't get "washed out" or over-amplified
         because it was never added in the first place.
       </p>
     </div>
 
     <!-- Interactive Comparison: Additive vs Rotation -->
-    <div class="bg-[#0f3460] rounded p-4 mt-4 mb-3">
+    <div class="bg-[#0f3460] rounded p-4 mb-4">
       <p class="text-[var(--text-body)] text-white font-semibold mb-3">
         See It: Additive vs Rotation
         <a href="https://www.youtube.com/watch?v=GQPOtyITy54&t=353s" target="_blank" rel="noopener noreferrer" class="text-[var(--text-small)] text-emerald-400 hover:text-emerald-300 ml-2 font-normal">[Reference Video]</a>
@@ -518,33 +471,14 @@
         <span class="text-gray-400">Solid line:</span> current position
       </p>
     </div>
-
-    <div class="bg-[#1a1a2e] border border-orange-500/30 rounded p-3 mt-3">
-      <p class="text-[var(--text-small)] text-orange-400 font-semibold mb-1">RoPE's Answer</p>
-      <p class="text-[var(--text-small)] text-gray-300">
-        <strong class="text-white">Rotate Q and K before the dot product.</strong> Position becomes part of the vectors themselves.
-        The dot product <em>naturally</em> encodes relative distance. No position lookup, no bias table, no dilution.
-      </p>
-    </div>
   </Section>
 
-  <!-- 3. The Key Insight: Rotation Encodes Relative Position -->
+  <!-- 3. The Intuition: The Searchlight -->
   <Section>
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">3. The Key Insight: Rotation Encodes Relative Position</h3>
-
-    <!-- Simple intuition first -->
-    <div class="bg-[#1a1a2e] border border-orange-500/50 rounded p-4 mb-4">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-purple-400">[Intuition]</span> The Core Mental Model</p>
-      <p class="text-[var(--text-body)] text-gray-300">
-        <strong class="text-orange-400">Nearby tokens → small angle difference. Far tokens → large angle difference.</strong>
-        The relative rotation between Q and K provides a distance-sensitive signal.
-        This is the conceptual heart of RoPE.
-      </p>
-    </div>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">3. The Intuition: The Searchlight</h3>
 
     <!-- The Searchlight Analogy -->
     <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-4 mb-4">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> The Searchlight</p>
       <p class="text-[var(--text-body)] text-gray-300 mb-3">
         Imagine each Query vector as a <strong class="text-yellow-400">searchlight</strong> pointing in some direction.
         Each Key vector is an object in the dark. The dot product measures <em>alignment</em> — how directly
@@ -686,22 +620,6 @@
         <span class="text-blue-400">―</span> Q vector &nbsp;
         <span class="text-orange-400">―</span> K vector &nbsp;
         <span class="text-emerald-400">―</span> angle between them (same for all!)
-      </p>
-    </div>
-
-    <!-- The math -->
-    <div class="bg-[#1a1a2e] border border-emerald-500/50 rounded p-4">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-cyan-400">[Guarantee]</span> The Math (One Line)</p>
-      <div class="bg-[#0f3460] rounded p-3 font-mono text-center mb-3">
-        <p class="text-[var(--text-body)]"><span class="text-blue-400">R<sub>m</sub></span> · <span class="text-orange-400">R<sub>n</sub></span><sup>T</sup> = <span class="text-emerald-400">R<sub>m−n</sub></span></p>
-      </div>
-      <p class="text-[var(--text-small)] text-gray-300">
-        The transpose of a rotation matrix is its inverse (rotating backwards).
-        So rotating by m then "unrotating" by n leaves just the <em>difference</em> (m−n).
-      </p>
-      <p class="text-[var(--text-small)] text-gray-500 mt-2 italic">
-        This is mathematically guaranteed for any rotation matrices. The positional effect on q<sub>m</sub><sup>T</sup>k<sub>n</sub>
-        becomes a function of (m−n) only.
       </p>
     </div>
   </Section>
@@ -855,7 +773,7 @@
 
         <!-- Clock Hand Analogy -->
         <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-3 mb-3">
-          <p class="text-[var(--text-small)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> The Clock with Many Hands</p>
+          <p class="text-[var(--text-small)] text-white font-semibold mb-2"><span class="text-yellow-400">[Intuition]</span> The Clock with Many Hands</p>
           <p class="text-[var(--text-small)] text-gray-300 mb-2">
             Picture RoPE as a clock with dozens of hands, all starting at 12 o'clock:
           </p>
@@ -976,7 +894,7 @@
 
         <!-- The Fingerprint Story -->
         <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-3 mt-3 mb-3">
-          <p class="text-[var(--text-small)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> The Unique Fingerprint</p>
+          <p class="text-[var(--text-small)] text-white font-semibold mb-2"><span class="text-yellow-400">[Intuition]</span> The Unique Fingerprint</p>
           <p class="text-[var(--text-small)] text-gray-300 mb-2">
             Why do we need so many pairs? Consider a single pair rotating at θ = 60° per position:
           </p>
@@ -1147,6 +1065,22 @@
           This rotation is applied to pair [q₀, q₁]. Other pairs use different θ values.
         </p>
       </div>
+
+      <!-- The math -->
+      <div class="bg-[#1a1a2e] border border-emerald-500/50 rounded p-4 mt-4">
+        <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-cyan-400">[Guarantee]</span> The Math (One Line)</p>
+        <div class="bg-[#0f3460] rounded p-3 font-mono text-center mb-3">
+          <p class="text-[var(--text-body)]"><span class="text-blue-400">R<sub>m</sub></span> · <span class="text-orange-400">R<sub>n</sub></span><sup>T</sup> = <span class="text-emerald-400">R<sub>m−n</sub></span></p>
+        </div>
+        <p class="text-[var(--text-small)] text-gray-300">
+          The transpose of a rotation matrix is its inverse (rotating backwards).
+          So rotating by m then "unrotating" by n leaves just the <em>difference</em> (m−n).
+        </p>
+        <p class="text-[var(--text-small)] text-gray-500 mt-2 italic">
+          This is mathematically guaranteed for any rotation matrices. The positional effect on q<sub>m</sub><sup>T</sup>k<sub>n</sub>
+          becomes a function of (m−n) only.
+        </p>
+      </div>
     </div>
 
     <!-- Complex Number Form (Alternative View) -->
@@ -1168,6 +1102,11 @@
         This is exactly equivalent to the matrix form — Euler's formula gives us
         e<sup>iθ</sup> = cos(θ) + i·sin(θ). The "relative phase" property feels natural:
         multiplying e<sup>imθ</sup> · e<sup>−inθ</sup> = e<sup>i(m−n)θ</sup>.
+      </p>
+      <p class="text-[var(--text-tiny)] text-gray-500 mt-3 italic">
+        To understand complex numbers more, watch
+        <a href="https://www.youtube.com/watch?v=f8CXG7dS-D0" target="_blank" class="text-cyan-400 hover:text-cyan-300">"The most beautiful equation in math"</a>
+        from Welch Labs.
       </p>
     </div>
 
@@ -1221,7 +1160,7 @@
 
     <!-- Why 2D is the minimum - Story -->
     <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-3 mt-3">
-      <p class="text-[var(--text-small)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> Why Pairs? The Geometry of Rotation</p>
+      <p class="text-[var(--text-small)] text-white font-semibold mb-2"><span class="text-yellow-400">[Intuition]</span> Why Pairs? The Geometry of Rotation</p>
       <p class="text-[var(--text-small)] text-gray-300 mb-2">
         You can't rotate a single number — there's nowhere to rotate <em>to</em>. In 1D, you only have forward and backward.
         But in 2D, you have a full circle of directions.
@@ -1292,7 +1231,6 @@
     </div>
 
     <div class="bg-[#1a1a2e] border border-orange-500/30 rounded p-3">
-      <p class="text-[var(--text-small)] text-orange-400 font-semibold mb-2"><span class="text-purple-400">[Intuition]</span> Why this split</p>
       <p class="text-[var(--text-small)] text-gray-300">
         Q·K decides <em>which</em> tokens talk to each other (position-dependent).
         V is <em>what</em> they say (content, not position). RoPE only needs to affect routing, not content.
@@ -1301,7 +1239,7 @@
 
     <!-- Content vs Position: The Radio Signal Story -->
     <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-4 mt-4">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> The Radio Signal</p>
+      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-yellow-400">[Intuition]</span> The Radio Signal</p>
       <p class="text-[var(--text-body)] text-gray-300 mb-3">
         "If we rotate the vector, don't we mess up the word's meaning?" This is the most common concern about RoPE.
         The answer lies in how information is encoded:
@@ -1422,7 +1360,7 @@
     </div>
   </Section>
 
-  <!-- 7. Interactive: Visualizing Rotation -->
+  <!-- 7. Visualizing the Rotation -->
   <Section>
     <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">7. Visualizing the Rotation</h3>
     <p class="text-[var(--text-body)] text-gray-300 mb-3">
@@ -1525,11 +1463,11 @@
     </div>
 
     <!-- Decay Visualization -->
-    <div class="bg-[#1a1a2e] border border-yellow-500/40 rounded p-4 mt-4">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-2"><span class="text-yellow-400">[Story]</span> The Natural Decay</p>
+    <div class="bg-[#1a1a2e] border border-purple-500/40 rounded p-4 mt-4">
+      <p class="text-[var(--text-body)] text-white font-semibold mb-2">The Natural Decay</p>
       <p class="text-[var(--text-body)] text-gray-300 mb-3">
-        RoPE has a remarkable emergent property: attention naturally tends to decay with distance.
-        This isn't programmed in — it falls out of the math.
+        RoPE has a mathematically proven property: the positional contribution to attention decays with distance.
+        This follows directly from the rotation mechanics and the choice of frequency formula.
       </p>
 
       <!-- Decay graph -->
@@ -1538,6 +1476,21 @@
         <p class="text-[var(--text-tiny)] text-gray-500 mb-2 text-center">
           Average positional alignment decays with distance — nearby tokens naturally attend more to each other
         </p>
+
+        <!-- Slider control -->
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <span class="text-[var(--text-tiny)] text-gray-400">Max distance:</span>
+          <input
+            type="range"
+            min="100"
+            max="10000"
+            step="100"
+            bind:value={decayMaxDist}
+            class="w-48 accent-emerald-500"
+          />
+          <span class="text-[var(--text-tiny)] text-emerald-400 font-mono w-16">{decayMaxDist}</span>
+        </div>
+
         <div class="flex justify-center">
           <svg viewBox="0 0 320 150" class="w-full max-w-md">
             <!-- Axes -->
@@ -1552,8 +1505,8 @@
 
             <!-- X-axis labels -->
             <text x="40" y="125" font-size="8" fill="#888" text-anchor="middle">0</text>
-            <text x="148" y="125" font-size="8" fill="#888" text-anchor="middle">25</text>
-            <text x="256" y="125" font-size="8" fill="#888" text-anchor="middle">50</text>
+            <text x="175" y="125" font-size="8" fill="#888" text-anchor="middle">{Math.round(decayMaxDist / 2)}</text>
+            <text x="310" y="125" font-size="8" fill="#888" text-anchor="middle">{decayMaxDist}</text>
             <text x="175" y="140" font-size="8" fill="#888" text-anchor="middle">Relative Distance (m - n)</text>
 
             <!-- Zero line -->
@@ -1561,16 +1514,14 @@
 
             <!-- Decay curve -->
             <path
-              d="M {decayPoints.map((p) => `${40 + p.dist * 5.4} ${110 - (p.score + 0.2) * 80}`).join(' L ')}"
+              d="M {decayPoints.map((p) => `${40 + p.dist * decayScale} ${110 - (p.score + 0.2) * 80}`).join(' L ')}"
               fill="none"
               stroke="#22c55e"
-              stroke-width="2.5"
+              stroke-width="2"
             />
 
-            <!-- Highlight the decay -->
+            <!-- Highlight start point -->
             <circle cx="40" cy={110 - (decayPoints[0].score + 0.2) * 80} r="4" fill="#22c55e"/>
-            <circle cx={40 + 10 * 5.4} cy={110 - (decayPoints[10].score + 0.2) * 80} r="3" fill="#22c55e" opacity="0.7"/>
-            <circle cx={40 + 30 * 5.4} cy={110 - (decayPoints[30].score + 0.2) * 80} r="3" fill="#22c55e" opacity="0.5"/>
           </svg>
         </div>
       </div>
@@ -1597,166 +1548,11 @@
         But RoPE provides a baseline "locality bias" that helps the model attend to relevant nearby tokens.
       </p>
     </div>
-
-    <!-- The Position 21 Problem - Extrapolation Story -->
-    <div class="bg-[#1a1a2e] border border-purple-500/40 rounded p-4 mt-4">
-      <p class="text-[var(--text-body)] text-white font-semibold mb-3"><span class="text-purple-400">[Story]</span> The Position 21 Problem</p>
-
-      <p class="text-[var(--text-body)] text-gray-300 mb-4">
-        You train a model on sequences of length 20. At inference, you ask about position 21. What happens?
-      </p>
-
-      <div class="grid md:grid-cols-2 gap-4 mb-4">
-        <!-- Sinusoidal side -->
-        <div class="bg-[#0f3460] rounded p-3 border border-red-500/30">
-          <p class="text-[var(--text-small)] text-red-400 font-semibold mb-2">Sinusoidal (Memorization)</p>
-
-          <div class="bg-[#1a1a2e] rounded p-2 mb-2 text-[var(--text-small)] font-mono">
-            <p class="text-gray-400">Training:</p>
-            <p class="text-gray-300">"Position 5 = <span class="text-blue-400">[0.84, 0.54, ...]</span>"</p>
-            <p class="text-gray-300">"Position 20 = <span class="text-blue-400">[0.91, -0.42, ...]</span>"</p>
-            <p class="text-gray-500 mt-2">Model memorizes: "I know positions 0-20"</p>
-          </div>
-
-          <div class="bg-[#1a1a2e] rounded p-2 mb-2 text-[var(--text-small)]">
-            <p class="text-gray-400 font-mono">Inference: position 21</p>
-            <p class="text-red-400 mt-1">🤖 "What is position 21? I've never seen this!"</p>
-            <p class="text-gray-500 mt-1">→ Perplexity explodes, output is erratic</p>
-          </div>
-
-          <p class="text-[var(--text-tiny)] text-gray-500 italic">
-            Like cramming for an exam: memorized answers don't help with new questions
-          </p>
-        </div>
-
-        <!-- RoPE side -->
-        <div class="bg-[#0f3460] rounded p-3 border border-emerald-500/30">
-          <p class="text-[var(--text-small)] text-emerald-400 font-semibold mb-2">RoPE (Pattern Learning)</p>
-
-          <div class="bg-[#1a1a2e] rounded p-2 mb-2 text-[var(--text-small)] font-mono">
-            <p class="text-gray-400">Training:</p>
-            <p class="text-gray-300">"Distance 5 = <span class="text-emerald-400">rotate by 5θ</span>"</p>
-            <p class="text-gray-300">"Distance 3 = <span class="text-emerald-400">rotate by 3θ</span>"</p>
-            <p class="text-gray-500 mt-2">Model learns: "I know how distance works"</p>
-          </div>
-
-          <div class="bg-[#1a1a2e] rounded p-2 mb-2 text-[var(--text-small)]">
-            <p class="text-gray-400 font-mono">Inference: position 21</p>
-            <p class="text-emerald-400 mt-1">🤖 "Position 21? That's 5 away from 16, 3 away from 18..."</p>
-            <p class="text-gray-500 mt-1">→ Same relative patterns still work!</p>
-          </div>
-
-          <p class="text-[var(--text-tiny)] text-gray-500 italic">
-            Like understanding math: you can solve new problems with learned principles
-          </p>
-        </div>
-      </div>
-
-      <!-- Visual: Training vs Inference -->
-      <div class="bg-[#0f3460] rounded p-3 mb-3">
-        <p class="text-[var(--text-small)] text-white font-semibold mb-2 text-center">What Each Model Learns</p>
-        <div class="flex justify-center gap-8 text-[var(--text-small)]">
-          <div class="text-center">
-            <p class="text-red-400 font-semibold">Sinusoidal</p>
-            <p class="text-gray-400">"Position 5 is <span class="text-blue-300">[vector]</span>"</p>
-            <p class="text-gray-400">"Position 6 is <span class="text-blue-300">[vector]</span>"</p>
-            <p class="text-gray-500">...</p>
-            <p class="text-gray-400">"Position 20 is <span class="text-blue-300">[vector]</span>"</p>
-            <p class="text-red-400 mt-1">Position 21 = ???</p>
-          </div>
-          <div class="text-gray-600 text-2xl self-center">vs</div>
-          <div class="text-center">
-            <p class="text-emerald-400 font-semibold">RoPE</p>
-            <p class="text-gray-400">"Distance 1 = <span class="text-emerald-300">small rotation</span>"</p>
-            <p class="text-gray-400">"Distance 5 = <span class="text-emerald-300">medium rotation</span>"</p>
-            <p class="text-gray-400">"Distance 10 = <span class="text-emerald-300">large rotation</span>"</p>
-            <p class="text-gray-500">...</p>
-            <p class="text-emerald-400 mt-1">Any distance = works!</p>
-          </div>
-        </div>
-      </div>
-
-      <p class="text-[var(--text-small)] text-gray-400 text-center">
-        <strong class="text-purple-400">Key insight:</strong> RoPE learns <em>relative patterns</em> that transfer to unseen positions.
-        Sinusoidal learns <em>absolute positions</em> that don't generalize beyond training.
-      </p>
-    </div>
   </Section>
 
-  <!-- 8. RoPE vs Previous Methods -->
+  <!-- 8. Why RoPE Dominates Modern LLMs -->
   <Section>
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">8. RoPE vs Previous Methods</h3>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-[var(--text-small)]">
-        <thead>
-          <tr class="border-b border-gray-700">
-            <th class="text-left py-2 px-2 text-gray-400">Method</th>
-            <th class="text-left py-2 px-2 text-gray-400">Where Applied</th>
-            <th class="text-left py-2 px-2 text-gray-400">How</th>
-            <th class="text-left py-2 px-2 text-gray-400">Position Type</th>
-          </tr>
-        </thead>
-        <tbody class="text-gray-300">
-          <tr class="border-b border-gray-800">
-            <td class="py-2 px-2 text-purple-400">Sinusoidal</td>
-            <td class="py-2 px-2">Input embeddings</td>
-            <td class="py-2 px-2">X = E + PE</td>
-            <td class="py-2 px-2">Absolute</td>
-          </tr>
-          <tr class="border-b border-gray-800">
-            <td class="py-2 px-2 text-blue-400">Shaw et al.</td>
-            <td class="py-2 px-2">Attention scores</td>
-            <td class="py-2 px-2">+ learned relative embeddings</td>
-            <td class="py-2 px-2">Relative</td>
-          </tr>
-          <tr class="border-b border-gray-800">
-            <td class="py-2 px-2 text-green-400">Transformer-XL</td>
-            <td class="py-2 px-2">Attention scores</td>
-            <td class="py-2 px-2">decomposed content + position terms</td>
-            <td class="py-2 px-2">Relative</td>
-          </tr>
-          <tr class="border-b border-gray-800">
-            <td class="py-2 px-2 text-yellow-400">T5</td>
-            <td class="py-2 px-2">Attention scores</td>
-            <td class="py-2 px-2">+ scalar bias</td>
-            <td class="py-2 px-2">Relative (bucketed)</td>
-          </tr>
-          <tr class="border-b border-gray-800 bg-orange-900/20">
-            <td class="py-2 px-2 text-orange-400 font-semibold">RoPE</td>
-            <td class="py-2 px-2">Q and K vectors</td>
-            <td class="py-2 px-2">R<sub>m</sub>(q<sub>m</sub>) · R<sub>n</sub>(k<sub>n</sub>)<sup>T</sup></td>
-            <td class="py-2 px-2 text-emerald-400">Relative (intrinsic)</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="grid md:grid-cols-2 gap-3 mt-4">
-      <div class="bg-[#0f3460] rounded p-3">
-        <p class="text-[var(--text-small)] text-orange-400 font-semibold mb-2">RoPE Advantages</p>
-        <ul class="text-[var(--text-small)] text-gray-300 space-y-1">
-          <li>• <strong class="text-white">No position embeddings to store</strong> — just rotate</li>
-          <li>• <strong class="text-white">Relative position is automatic</strong> — falls out of the math</li>
-          <li>• <strong class="text-white">Position survives deep layers</strong> — applied at attention time</li>
-          <li>• <strong class="text-white">Efficient</strong> — element-wise operations only</li>
-        </ul>
-      </div>
-      <div class="bg-[#0f3460] rounded p-3">
-        <p class="text-[var(--text-small)] text-gray-400 font-semibold mb-2">RoPE Considerations</p>
-        <ul class="text-[var(--text-small)] text-gray-300 space-y-1">
-          <li>• <strong class="text-white">Context length constrained by multiple factors:</strong> base frequency (wraparound),
-              training distribution, attention scaling, and extrapolation method</li>
-          <li>• Needs scaling for extrapolation (NTK-aware, YaRN, etc.)</li>
-          <li>• Applied per attention head on head dimension d<sub>head</sub> (not full model dimension)</li>
-        </ul>
-      </div>
-    </div>
-  </Section>
-
-  <!-- 9. Why RoPE Dominates Modern LLMs -->
-  <Section>
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">9. Why RoPE Dominates Modern LLMs</h3>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">8. Why RoPE Dominates Modern LLMs</h3>
 
     <div class="space-y-3">
       <div class="bg-[#0f3460] rounded p-3">
@@ -1810,12 +1606,57 @@
     </div>
   </Section>
 
-  <!-- 10. RoPE Attention Flow Diagram -->
+  <!-- 9. RoPE Attention Flow -->
   <Section>
-    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">10. RoPE Attention Flow</h3>
+    <h3 class="text-[var(--text-h2)] font-semibold text-[#e94560] mb-2">9. RoPE Attention Flow</h3>
     <p class="text-[var(--text-small)] text-gray-400 mb-3">
       How rotation is applied to Q and K vectors before computing attention scores.
     </p>
     <Rope_AttnDiagram />
   </Section>
+
+  <!-- What happened next -->
+  <section class="bg-gradient-to-br from-cyan-600/30 via-blue-700/20 to-purple-800/20 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20 rounded-lg p-4 mb-4">
+    <h3 class="text-[var(--text-h2)] font-semibold text-cyan-300 mb-2">💡 What happened next</h3>
+
+    <p class="text-[var(--text-small)] text-gray-300 mb-4">
+      RoPE became dominant, but its complexity led researchers to ask a provocative question...
+    </p>
+
+    <div class="space-y-3 text-[var(--text-small)] mb-4">
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Do we actually need rotation matrices?</strong></p>
+          <p class="text-gray-500">RoPE is elegant, but is the math overkill for what position does?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">What if "closer = attend more" is all we need?</strong></p>
+          <p class="text-gray-500">Maybe a simple distance penalty is enough for most tasks?</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <span class="text-cyan-400">?</span>
+        <div>
+          <p class="text-gray-300"><strong class="text-white">Can we get length extrapolation without scaling tricks?</strong></p>
+          <p class="text-gray-500">RoPE needs NTK/YaRN to extend — could a simpler method generalize naturally?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teaser for ALiBi -->
+    <div class="bg-[#e94560]/20 border border-[#e94560]/50 rounded p-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-[#e94560]">ALiBi (2022)</strong> challenged the complexity:
+        <strong class="text-white">just subtract a linear distance penalty</strong> from attention scores.
+        No rotation, no learned parameters — just <code class="bg-gray-800 px-1 rounded">score -= m × distance</code>.
+      </p>
+      <p class="text-[var(--text-small)] text-gray-500 mt-2">
+        → See the <strong class="text-cyan-400">ALiBi</strong> tab
+      </p>
+    </div>
+  </section>
 </div>

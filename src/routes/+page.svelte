@@ -11,6 +11,8 @@
 	import RoPE from '$lib/components/RoPE.svelte';
 	import ALiBi from '$lib/components/ALiBi.svelte';
 	import NoPE from '$lib/components/NoPE.svelte';
+	import YarnNtk from '$lib/components/YarnNtk.svelte';
+	import DroPE from '$lib/components/DroPE.svelte';
 
 	const tabs = [
 		{
@@ -54,6 +56,18 @@
 			label: 'NoPE',
 			description: 'No Positional Encoding (Kazemnejad et al., 2023)',
 			color: 'bg-pink-600'
+		},
+		{
+			id: 'yarn-ntk',
+			label: 'YaRN+NTK',
+			description: 'RoPE scaling methods (PI, NTK, YaRN - 2023)',
+			color: 'bg-amber-600'
+		},
+		{
+			id: 'drope',
+			label: 'DroPE',
+			description: 'Dropping PE for context extension (Sakana AI, 2024)',
+			color: 'bg-emerald-600'
 		}
 	];
 
@@ -101,6 +115,14 @@
 
 		<KeepAlive show={activeTab === 'nope'}>
 			<NoPE />
+		</KeepAlive>
+
+		<KeepAlive show={activeTab === 'yarn-ntk'}>
+			<YarnNtk />
+		</KeepAlive>
+
+		<KeepAlive show={activeTab === 'drope'}>
+			<DroPE />
 		</KeepAlive>
 
 		<!-- Footer -->

@@ -104,6 +104,13 @@
     <p class="text-[var(--text-small)] text-gray-500 mt-2">
       The model can't <em>prefer</em> one ordering over another — if you permute the input, the outputs permute the same way.
     </p>
+
+    <div class="bg-[#1a1a2e] border border-amber-500/30 rounded p-3 mt-3">
+      <p class="text-[var(--text-small)] text-gray-300">
+        <strong class="text-amber-400">The question:</strong> How do we give the model a sense of
+        <em>where</em> each token is in the sequence?
+      </p>
+    </div>
   </Section>
 
   <!-- 2. The Insight: Binary Counting -->
@@ -666,35 +673,6 @@
       </div>
     </div>
 
-    <!-- Limitations & Future Improvements -->
-    <div class="bg-[#1a1a2e] border border-amber-500/30 rounded p-3">
-      <p class="text-[var(--text-small)] text-amber-400 font-semibold mb-2">LIMITATIONS & FUTURE IMPROVEMENTS</p>
-      <div class="space-y-2 text-[var(--text-small)]">
-        <div class="flex gap-2">
-          <span class="text-red-400">✗</span>
-          <div>
-            <p class="text-gray-300"><strong class="text-white">Absolute, not relative:</strong> PE encodes "I am at position 5", not "I am 3 positions after X"</p>
-            <p class="text-gray-500">Model must learn relative patterns indirectly</p>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-red-400">✗</span>
-          <div>
-            <p class="text-gray-300"><strong class="text-white">Added, not integrated:</strong> PE is added to embeddings, not part of attention</p>
-            <p class="text-gray-500">Position info can get "washed out" in deep layers</p>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-red-400">✗</span>
-          <div>
-            <p class="text-gray-300"><strong class="text-white">Extrapolation uncertain:</strong> Defined for any position, but model may not generalize beyond training range</p>
-            <p class="text-gray-500">Periodicity eventually causes ambiguity; later methods handle length better</p>
-          </div>
-        </div>
-      </div>
-
-      <p class="text-[var(--text-small)] text-emerald-400 mt-3">Later methods address these limitations.</p>
-    </div>
   </Section>
 
   <!-- 7. Visualizing the Positional Encoding -->
@@ -978,6 +956,51 @@
       </p>
     </div>
   </Section>
+
+  <!-- What happened next - eureka section -->
+  <section class="bg-gradient-to-br from-cyan-600/30 via-blue-700/20 to-purple-800/20 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20 rounded-lg p-4 mb-4">
+    <h3 class="text-[var(--text-h2)] font-semibold text-cyan-300 mb-2">💡 What happened next</h3>
+
+    <div class="bg-[#1a1a2e]/80 rounded p-4 mb-4">
+      <p class="text-[var(--text-small)] text-gray-300 mb-3">
+        Sinusoidal PE works, but researchers noticed some interesting challenges:
+      </p>
+      <div class="space-y-2 text-[var(--text-small)]">
+        <div class="flex gap-2">
+          <span class="text-cyan-400">?</span>
+          <div>
+            <p class="text-gray-300"><strong class="text-white">Absolute, not relative:</strong> PE encodes "I am at position 5", not "I am 3 positions after X"</p>
+            <p class="text-gray-500">Could we encode relative position more directly?</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-cyan-400">?</span>
+          <div>
+            <p class="text-gray-300"><strong class="text-white">Added, not integrated:</strong> PE is added to embeddings, not part of attention</p>
+            <p class="text-gray-500">What if position was built into the attention mechanism itself?</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-cyan-400">?</span>
+          <div>
+            <p class="text-gray-300"><strong class="text-white">Extrapolation uncertain:</strong> Defined for any position, but model may not generalize beyond training range</p>
+            <p class="text-gray-500">How can we handle longer sequences than we trained on?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teaser for Relative-PE -->
+    <div class="bg-[#e94560]/15 border border-[#e94560]/40 rounded p-4">
+      <p class="text-[var(--text-small)] text-[#e94560] font-semibold mb-2">What if we encoded relative position directly?</p>
+      <p class="text-[var(--text-small)] text-gray-300">
+        Instead of adding PE to embeddings and hoping the model learns... what if we <strong class="text-white">injected relative position directly into attention</strong>?
+      </p>
+      <p class="text-[var(--text-small)] text-gray-400 mt-2">
+        → See the <strong class="text-[#e94560]">Relative-PE</strong> tab
+      </p>
+    </div>
+  </section>
 
 </div>
 
